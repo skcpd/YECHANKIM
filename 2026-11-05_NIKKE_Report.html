@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[게임분석] 승리의 여신: 니케 매출 순위 상승 원인</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f6f5f2;
+    --surface-1: #fcfcfb;
+    --border: #e3e1db;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #76746e;
+    --series-1: #2a78d6;
+    --grid: #ebe9e4;
+    --accent-soft: #e8f0fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --border: #2e2e2c;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #94938b;
+      --series-1: #3987e5;
+      --grid: #2a2a28;
+      --accent-soft: #1d2a3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border: #2e2e2c;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #94938b;
+    --series-1: #3987e5;
+    --grid: #2a2a28;
+    --accent-soft: #1d2a3b;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 80px; }
+  header .kicker { color: var(--text-muted); font-size: 13px; letter-spacing: .02em; }
+  h1 { font-size: 30px; line-height: 1.3; margin: 8px 0 12px; letter-spacing: -.01em; }
+  .lead { font-size: 17px; color: var(--text-secondary); max-width: 680px; margin: 0; }
+  .meta { margin-top: 14px; font-size: 13px; color: var(--text-muted); }
+
+  section { margin-top: 48px; }
+  h2 { font-size: 20px; margin: 0 0 6px; letter-spacing: -.01em; }
+  .sub { color: var(--text-secondary); font-size: 14px; margin: 0 0 18px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 28px; }
+  .stat { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .stat .num { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .stat .lbl { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+  .callout {
+    margin-top: 28px;
+    background: var(--accent-soft);
+    border-radius: 12px;
+    padding: 18px 20px;
+    border-left: 4px solid var(--series-1);
+  }
+  .callout strong { font-size: 16px; }
+  .callout p { margin: 6px 0 0; color: var(--text-secondary); font-size: 15px; }
+
+  /* chart */
+  .chart-wrap { position: relative; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart text { font-family: inherit; fill: var(--text-secondary); font-size: 12px; }
+  .chart .axis-label { fill: var(--text-muted); }
+  .chart .pt-label { fill: var(--text-primary); font-size: 13px; font-weight: 600; }
+  .chart .grid { stroke: var(--grid); stroke-width: 1; }
+  .chart .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .event { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 4; }
+  .chart .dot { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+  .chart .hit { fill: transparent; cursor: pointer; }
+  .chart .hit:focus-visible + .dot, .chart .dot.active { stroke: var(--text-primary); }
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0; transition: opacity .12s;
+    background: var(--text-primary); color: var(--surface-1);
+    padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; white-space: nowrap;
+    transform: translate(-50%, calc(-100% - 12px)); z-index: 2;
+  }
+  .tip.show { opacity: 1; }
+  .tip b { display: block; font-size: 13px; }
+  .chart-note { font-size: 12.5px; color: var(--text-muted); margin: 10px 0 0; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-size: 13.5px; color: var(--text-secondary); }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-muted); font-weight: 600; font-size: 12.5px; }
+
+  /* causes */
+  .causes { display: grid; gap: 12px; }
+  .cause { display: grid; grid-template-columns: 40px 1fr; gap: 14px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .cause .n { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--series-1); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .cause h3 { margin: 0 0 4px; font-size: 16px; }
+  .cause p { margin: 0; font-size: 14.5px; color: var(--text-secondary); }
+  .cause ul { margin: 6px 0 0; padding-left: 18px; font-size: 14.5px; color: var(--text-secondary); }
+  .tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-muted); margin-left: 6px; vertical-align: 2px; font-weight: 500; }
+
+  .limits { margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14.5px; }
+  .limits li { margin: 4px 0; }
+  .sources { font-size: 14px; padding-left: 20px; color: var(--text-secondary); }
+  .sources a { color: var(--series-1); }
+  footer { margin-top: 56px; font-size: 12.5px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 16px; }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 24px; }
+    .cause { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">게임분석 · 모바일 매출 순위</div>
+    <h1>승리의 여신: 니케,<br>35위에서 5위로 오른 이유</h1>
+    <p class="lead">10월 29일 4주년 업데이트가 직접적인 원인입니다. 35위는 업데이트 효과가 반영되기 전의 바닥 구간이었고, 무료 뽑기·신규 픽업·복귀 유도·대형 스토리가 한꺼번에 들어오면서 매출 순위가 올라왔습니다.</p>
+    <div class="meta">기준일 2026-11-05 · 한국 구글 플레이 매출 순위 · Level Infinite / 시프트업</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="num">35위 → 5위</div><div class="lbl">한국 구글 매출 (10/29 오전 → 11/5)</div></div>
+    <div class="stat"><div class="num">최대 230회</div><div class="lbl">4주년 무료 뽑기 기회</div></div>
+    <div class="stat"><div class="num">일본 구글 1위</div><div class="lbl">11/2 기준, 대만 구글 5위</div></div>
+    <div class="stat"><div class="num">앱스토어 1위</div><div class="lbl">10/29 업데이트 당일 한국 앱스토어</div></div>
+  </div>
+
+  <div class="callout">
+    <strong>35→5는 상승 폭이 크게 보이는 비교입니다</strong>
+    <p>10/1에는 구글 15위였다가 4주년 직전 20계단이 빠진 상태였습니다. 평소 수준(15위 전후)과 비교하면 15위에서 3~5위권으로 올라온 것이 더 정확한 비교입니다.</p>
+  </div>
+
+  <section>
+    <h2>순위 흐름</h2>
+    <p class="sub">한국 구글 플레이 매출 순위. 위쪽일수록 높은 순위입니다.</p>
+    <div class="card">
+      <div class="chart-wrap" id="chartWrap">
+        <svg class="chart" id="chart" viewBox="0 0 720 320" role="img" aria-label="한국 구글 매출 순위 변화: 10월 1일 15위, 10월 29일 35위, 11월 2일 3위, 11월 5일 5위"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <p class="chart-note">점을 가리키면 상세가 보입니다. 점 사이의 선은 이어 그린 것이고, 그 사이 날짜의 측정값은 없습니다. 10/29 점은 업데이트 점검(00:00~07:00) 직후 오전에 캡처한 값이라 업데이트 효과가 반영되기 전으로 추정합니다.</p>
+      <details>
+        <summary>표로 보기</summary>
+        <table>
+          <thead><tr><th>시점</th><th>구글(한국)</th><th>앱스토어(한국)</th><th>출처</th></tr></thead>
+          <tbody>
+            <tr><td>10/1</td><td>15위</td><td>45위</td><td>모바일인덱스 캡처</td></tr>
+            <tr><td>10/29 오전</td><td>35위</td><td>TOP 47 밖</td><td>모바일인덱스 캡처</td></tr>
+            <tr><td>10/29 당일</td><td>-</td><td>1위</td><td>ZDNet 보도</td></tr>
+            <tr><td>11/2</td><td>3위</td><td>-</td><td>ZDNet (모바일인덱스 기준)</td></tr>
+            <tr><td>10/26~11/1 주간</td><td>4위</td><td>-</td><td>베타뉴스 (한국 기준 여부 명시 없음)</td></tr>
+            <tr><td>11/5 현재</td><td>5위</td><td>-</td><td>직접 확인 (실시간 순위)</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <h2>상승 원인</h2>
+    <p class="sub">기사와 공지에서 확인한 내용입니다. 요소별 기여도는 어느 기사에도 나오지 않아 중요도 순서는 추정입니다.</p>
+    <div class="causes">
+
+      <div class="cause">
+        <div class="n">1</div>
+        <div>
+          <h3>무료 뽑기 230회<span class="tag">확인</span></h3>
+          <p>이벤트 보상과 무료 모집을 합쳐 최대 230회. 마리안·홍련 각각 최대 21회 무료 모집, 매일 무료 모집, 접속 보상으로 고급 모집 티켓 10장과 선택 모집 티켓 10장이 나옵니다.</p>
+          <p style="margin-top:6px">추정: 무료로 복귀해서 받은 뒤, 마음에 드는 캐릭터에 추가 결제하는 흐름이 만들어집니다.</p>
+        </div>
+      </div>
+
+      <div class="cause">
+        <div class="n">2</div>
+        <div>
+          <h3>신규 픽업 캐릭터 두 번에 나눠 투입<span class="tag">확인</span></h3>
+          <ul>
+            <li>마리안: 퀸 (10/29–11/19)</li>
+            <li>홍련: 신살 (11/5–11/26)</li>
+            <li>필그림 선택 모집: 신데렐라·그레이브·나유타 / 배포 캐릭터 라푼젤: 생츄어리 (최대 4장)</li>
+          </ul>
+          <p style="margin-top:6px">픽업을 10/29와 11/5로 나눠 매출 피크가 두 번 생기는 구조입니다. ZDNet도 11/5 홍련 합류를 추가 반등 계기로 서술했습니다.</p>
+        </div>
+      </div>
+
+      <div class="cause">
+        <div class="n">3</div>
+        <div>
+          <h3>복귀 유저 유도<span class="tag">확인</span></h3>
+          <p>24일 이상 미접속자 대상 RISE AGAIN 복귀 이벤트와 복귀 전용 패키지, 성장 지원 시스템 싱크로 부스트가 함께 들어왔습니다. 순위가 빠졌던 구간에 이탈한 유저를 다시 불러오는 장치로 보입니다.</p>
+        </div>
+      </div>
+
+      <div class="cause">
+        <div class="n">4</div>
+        <div>
+          <h3>대형 스토리와 콘텐츠<span class="tag">확인</span></h3>
+          <p>메인 스토리 49·50챕터(최종 결전), 풀 보이스 이벤트 MARIA-n, 신규 보스, 한정 코스튬 재판매, 구매 이벤트 AFFECTION TRAIL이 추가됐습니다.</p>
+        </div>
+      </div>
+
+      <div class="cause">
+        <div class="n">5</div>
+        <div>
+          <h3>외부 마케팅<span class="tag">효과 미확인</span></h3>
+          <p>스텔라 블레이드 리듬게임 콜라보, 무신사 팝업(11/6–11/19 성수), 용산·홍대 옥외광고(10/29–11/11), 치지직 드롭스, 글로벌 창작대회가 진행됩니다. 순위에 얼마나 기여했는지는 기사에 없습니다.</p>
+        </div>
+      </div>
+
+      <div class="cause">
+        <div class="n">6</div>
+        <div>
+          <h3>글로벌 동시 상승<span class="tag">확인</span></h3>
+          <p>일본 구글 1위, 대만 구글 5위, 일본·대만 앱스토어 당일 각 2위로 한국만의 현상이 아닙니다. ZDNet은 3주년(2025년 11월)에도 일본 앱스토어 2위, 국내 한때 1위였다고 비교해 "주요 업데이트마다 순위가 오르는 패턴"으로 서술했습니다.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>한계와 다음 확인</h2>
+    <div class="card">
+      <ul class="limits">
+        <li>모든 기사가 상승 원인을 "4주년 업데이트 전반"으로만 서술합니다. 요소별 기여도 분리는 없습니다.</li>
+        <li>매출액·다운로드 수치는 어느 기사에도 없습니다. 순위는 상대 위치일 뿐입니다.</li>
+        <li>모바일인덱스는 제3자 집계라 실제 매출과 차이가 있을 수 있고, 실시간 순위는 시각에 따라 바뀝니다.</li>
+        <li>10/29 캡처가 업데이트 반영 전이었다는 설명은 추정입니다. 10/29 오후~10/30 캡처로 확인할 수 있습니다.</li>        <li>플레이포럼 기사는 접속 오류로 읽지 못했습니다.</li>
+        <li>다음 확인: 11/5 홍련 픽업 효과(일별 순위), 3주년 업데이트 후 곡선과의 비교.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>출처</h2>
+    <ol class="sources">
+      <li><a href="https://zdnet.co.kr/view/?no=20261102094333">ZDNet Korea — 니케 4주년 효과로 매출 순위 급등 (2026-11-02)</a></li>
+      <li><a href="https://www.betanews.net/article/view/beta202611020005">베타뉴스 — [주간 모바일 순위] 4주년 니케 (2026-11-02)</a></li>
+      <li><a href="https://www.inven.co.kr/webzine/news/?news=322708">인벤 — 230뽑 무료에 탈배포급 니케까지! 4주년 (2026-10-29)</a></li>
+      <li><a href="https://www.inven.co.kr/webzine/news/?news=322531">인벤 — 니케 4주년 특별 방송 (2026-10-24)</a></li>
+      <li><a href="https://bbs.ruliweb.com/news/board/1004/read/2296183">루리웹 — 10월 29일 업데이트 사전 안내 (2026-10-26)</a></li>
+    </ol>
+  </section>
+
+  <footer>작성: 김예찬 · Claude Code / 2026-11-05 / 검토 전 문서입니다.</footer>
+</div>
+
+<script>
+(function () {
+  var W = 720, H = 320, m = { l: 44, r: 36, t: 40, b: 40 };
+  var pw = W - m.l - m.r, ph = H - m.t - m.b;
+  var start = Date.UTC(2026, 9, 1);
+  var DAY = 86400000;
+  var maxDay = 35;
+  var maxRank = 40;
+  var data = [
+    { day: 0,  rank: 15, label: "10/1",  title: "10/1",       note: "모바일인덱스 캡처" },
+    { day: 28, rank: 35, label: "10/29", title: "10/29 오전", note: "업데이트 점검 직후 · 효과 반영 전으로 추정" },
+    { day: 32, rank: 3,  label: "11/2",  title: "11/2",       note: "ZDNet 보도 (모바일인덱스 기준)" },
+    { day: 35, rank: 5,  label: "11/5",  title: "11/5",       note: "현재 · 홍련: 신살 합류일" }
+  ];
+  var svg = document.getElementById("chart");
+  var ns = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    var e = document.createElementNS(ns, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    svg.appendChild(e);
+    return e;
+  }
+  var x = function (d) { return m.l + (d / maxDay) * pw; };
+  var y = function (r) { return m.t + ((r - 1) / (maxRank - 1)) * ph; };
+
+  [1, 10, 20, 30, 40].forEach(function (r) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(r), y2: y(r), "class": "grid" });
+    el("text", { x: m.l - 10, y: y(r) + 4, "text-anchor": "end", "class": "axis-label" }, r + "위");
+  });
+  [0, 7, 14, 21, 28, 35].forEach(function (d) {
+    var dt = new Date(start + d * DAY);
+    el("text", { x: x(d), y: H - 14, "text-anchor": "middle", "class": "axis-label" },
+       (dt.getUTCMonth() + 1) + "/" + dt.getUTCDate());
+  });
+
+  // 4주년 업데이트 기준선
+  el("line", { x1: x(28), x2: x(28), y1: m.t - 8, y2: H - m.b, "class": "event" });
+  el("text", { x: x(28) - 6, y: m.t - 14, "text-anchor": "end" }, "10/29 4주년 업데이트");
+
+  var d = data.map(function (p, i) { return (i ? "L" : "M") + x(p.day).toFixed(1) + " " + y(p.rank).toFixed(1); }).join(" ");
+  el("path", { d: d, "class": "line" });
+
+  var tip = document.getElementById("tip");
+  var wrap = document.getElementById("chartWrap");
+  var dots = [];
+  data.forEach(function (p) {
+    var cx = x(p.day), cy = y(p.rank);
+    var hit = el("circle", { cx: cx, cy: cy, r: 18, "class": "hit", tabindex: 0,
+      "aria-label": p.title + " " + p.rank + "위. " + p.note });
+    var dot = el("circle", { cx: cx, cy: cy, r: 5, "class": "dot" });
+    dots.push(dot);
+    var below = p.rank > 20;
+    el("text", { x: below ? cx + 12 : cx, y: below ? cy + 4 : cy - 12,
+      "text-anchor": below ? "start" : "middle", "class": "pt-label" }, p.rank + "위");
+
+    function show() {
+      var r = svg.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+      var sx = r.width / W, sy = r.height / H;
+      tip.innerHTML = "<b>" + p.title + " · " + p.rank + "위</b>" + p.note;
+      tip.style.left = (r.left - wr.left + cx * sx) + "px";
+      tip.style.top = (r.top - wr.top + cy * sy) + "px";
+      tip.classList.add("show");
+      dot.classList.add("active");
+    }
+    function hide() { tip.classList.remove("show"); dot.classList.remove("active"); }
+    hit.addEventListener("pointerenter", show);
+    hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", show);
+    hit.addEventListener("blur", hide);
+  });
+})();
+</script>
+</body>
+</html>
